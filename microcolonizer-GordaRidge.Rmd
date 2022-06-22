@@ -1,0 +1,594 @@
+---
+title: "Gorda Ridge Cones"
+author: "Sarah Hu"
+date: "8/19/2021"
+output: 
+  html_document:
+    number_sections: true
+    theme: cosmo
+    highlight: kate
+    collapsed: false
+    toc: true
+    toc_depth: 4
+    toc_float: true
+
+knit: (function(input_file, encoding) {
+  out_dir <- 'docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Library loading initial}
+library(tidyverse); library(cowplot)
+library(phyloseq); library(decontam)
+library(plotly); library(lubridate)
+```
+
+# Merged data from QIIME2 analysis
+
+Run below to repeat ASV compilation from raw QIIME2 output.
+```{r Join raw taxonomy and ASV data}
+# merged_tax <- read_delim("/Users/sarahhu/Desktop/Projects/microeuks_deepbiosphere_datamine/microeuk-amplicon-survey/data-input/taxonomy.tsv", delim = "\t")
+# merged_asv <- read_delim("/Users/sarahhu/Desktop/Projects/microeuks_deepbiosphere_datamine/microeuk-amplicon-survey/data-input/microeuk-merged-asv-table.tsv", delim = "\t", skip = 1)
+# metadata <- read.delim("/Users/sarahhu/Desktop/Projects/microeuks_deepbiosphere_datamine/microeuk-amplicon-survey/data-input/samplelist-metadata.txt")
+# 
+# asv_wtax <- merged_asv %>%
+#   select(FeatureID = '#OTU ID', everything()) %>%
+#   pivot_longer(cols = !FeatureID,
+#                names_to = "SAMPLE", values_to = "value") %>%
+#   left_join(merged_tax, by = c("FeatureID" = "Feature ID")) %>%
+#   left_join(metadata) %>%
+#   filter(SITE == "GordaRidge" | SITE == "substrate" | SITE == "Laboratory") %>%
+#   filter(!grepl("Siders_", SAMPLE)) %>%
+#   filter(!(grepl("T0", SAMPLE))) %>%
+#   filter(!(grepl("T24", SAMPLE))) %>%
+#   filter(!(grepl("T36", SAMPLE))) %>%
+#   mutate(DATASET = case_when(
+#     grepl("_GR_", SAMPLE) ~ "GR",
+#     grepl("Gorda", SAMPLE) ~ "GR",
+#     grepl("_MCR_", SAMPLE) ~ "MCR",
+#     grepl("Axial", SAMPLE) ~ "Axial",
+#   TRUE ~ "Control or blank")) %>%
+#     separate(Taxon, c("Domain", "Supergroup",
+#                   "Phylum", "Class", "Order",
+#                   "Family", "Genus", "Species"), sep = ";", remove = FALSE)
+# 
+# # fix naming, some controls sequenced separately.
+# gr_substrate_fluid_asvs <- asv_wtax %>%
+#   mutate(SAMPLE_tmp = case_when(
+#     Sample_actual == "" ~ SAMPLE,
+#     TRUE ~ Sample_actual
+#   )) %>%
+#   select(-SAMPLE) %>%
+#   select(SAMPLE = SAMPLE_tmp, everything()) %>%
+#   filter(value > 0)
+
+# View(gr_substrate_fluid_asvs)
+# View(gr_substrate_fluid_asvs %>% filter(Sample_or_Control == "Control") %>% select(SAMPLE) %>% distinct())
+# save(gr_substrate_fluid_asvs, file = "/Users/sarahhu/Desktop/Projects/GordaRidge-microcolonizers/microcolonizers-GordaRidge/input-data/asv-table.RData")
+```
+
+# Import microcolonizer data
+```{r}
+load("input-data/asv-table.RData", verbose = TRUE)
+```
+
+### Quick look - unprocessed data
+Barplots to show total number of sequences and total number of ASVs
+```{r Plot total ASV and sequences, fig.height=12, fig.width=19}
+plot_grid(gr_substrate_fluid_asvs %>% 
+  filter(value > 0) %>% 
+  ggplot(aes(x = SAMPLE)) +
+  geom_bar(stat = "count", width = 0.9) +
+  labs(y = "Total ASVs") +
+  coord_flip() +
+  theme_linedraw() +
+  facet_grid(DATASET ~ ., scale = "free", space = "free") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1),
+        strip.background = element_blank(), strip.text = element_text(color = "black")),
+  gr_substrate_fluid_asvs %>% 
+  group_by(SAMPLE, SITE, Domain, DATASET) %>% 
+  summarise(SUM_SEQ_DOMAIN = sum(value)) %>% 
+  ggplot(aes(x = SAMPLE, y = SUM_SEQ_DOMAIN, fill = Domain)) +
+  geom_bar(stat = "identity", color = "black", width = 0.9) +
+  labs(y = "Total Sequences") +
+  coord_flip() +
+  theme_linedraw() +
+  facet_grid(DATASET ~ ., scale = "free", space = "free") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1),
+        strip.background = element_blank(), strip.text = element_text(color = "black"),
+        legend.position = "bottom"),
+  ncol = 2)
+```
+
+### Table reporting total ASVs and sequences
+```{r Total ASVs raw}
+# View(gr_substrate_fluid_asvs %>% filter(value > 0) %>% 
+#        group_by(SAMPLE, DATASET, SITE) %>% 
+#        summarise(SEQ_SUM = sum(value),
+#                  ASV_COUNT = n()))
+```
+
+
+## Decontaminate sequence library
+Import sample description text file, import as phyloseq library, and remove potential contaminate ASVs and sequences. Catalog total number of ASVs and sequences removed from analysis.
+
+### Import as phyloseq objects
+```{r Extract taxa and sample info as matrix for phyloseq input}
+# head(gr_substrate_fluid_asvs)
+tax_matrix <- gr_substrate_fluid_asvs %>% 
+  select(FeatureID, Taxon) %>% 
+  distinct() %>% 
+  separate(Taxon, c("Domain", "Supergroup", 
+                  "Phylum", "Class", "Order",
+                  "Family", "Genus", "Species"), sep = ";", remove = FALSE) %>% 
+  column_to_rownames(var = "FeatureID") %>% 
+  as.matrix
+
+asv_matrix <- gr_substrate_fluid_asvs %>% 
+  select(FeatureID, SAMPLE, value) %>% 
+  pivot_wider(names_from = "SAMPLE", values_fill = 0, values_from = value) %>% 
+  column_to_rownames(var = "FeatureID") %>% 
+  as.matrix
+
+# Align row names for each matrix
+rownames(tax_matrix) <- row.names(asv_matrix)
+
+metadata_cones <- gr_substrate_fluid_asvs %>% 
+  select(SAMPLE, Type, VENT, SITE, SAMPLETYPE, Sample_or_Control) %>% 
+  distinct() %>% 
+  column_to_rownames(var = "SAMPLE")
+```
+
+```{r Phyloseq import}
+# Import asv and tax matrices
+ASV = otu_table(asv_matrix, taxa_are_rows = TRUE)
+TAX = tax_table(tax_matrix)
+phylo_obj <- phyloseq(ASV, TAX)
+
+# Import metadata as sample data in phyloseq
+samplenames <- sample_data(metadata_cones)
+
+# join as phyloseq object
+physeq_wnames = merge_phyloseq(phylo_obj, samplenames)
+# colnames(ASV)
+
+## Check
+# physeq_wnames
+# View(gr_substrate_fluid_asvs %>% filter(value > 0))
+```
+
+### Identify contaminant ASVs
+
+In addition to shipboard milliQ blank samples, each substrate type had a 'blank' control, which was sampled at the same time, but never deployed in the microcolonizers (only processed at the same time in the lab). 
+
+```{r Assign control samples}
+# When "Control" appears in "Sample_or_Control column, this is a negative control"
+sample_data(physeq_wnames)$is.neg <- sample_data(physeq_wnames)$Sample_or_Control == "Control"
+```
+
+```{r Identify contaminant ASVs}
+# ID contaminants using Prevalence information
+contam_prev <- isContaminant(physeq_wnames, 
+                               method="prevalence", 
+                               neg="is.neg", 
+                               threshold = 0.5, normalize = TRUE) 
+
+# Report number of ASVs IDed as contamintants
+table(contam_prev$contaminant)
+```
+> 0.5 - this threshold will ID contaminants in all samples that are more prevalent in negative controls than in positive samples.
+
+### Remove problematic ASVs
+```{r Assign contaminant ASVs}
+# Subset contaminant ASVs
+contams <- filter(contam_prev, contaminant == "TRUE")
+list_of_contam_asvs <- as.character(row.names(contams))
+# length(list_of_contam_asvs)
+
+taxa_contam <- as.data.frame(tax_matrix) %>% 
+  rownames_to_column(var = "FeatureID") %>% 
+  filter(FeatureID %in% list_of_contam_asvs)
+# head(taxa_contam)
+```
+
+
+```{r Compare decontaminated data with original}
+# View(asv_wtax)
+asv_wtax_decon <- gr_substrate_fluid_asvs %>% 
+  filter(!(FeatureID %in% list_of_contam_asvs)) %>% 
+  filter(!(Sample_or_Control == "Control"))
+
+tmp_orig <- (gr_substrate_fluid_asvs %>% filter(!(Sample_or_Control == "Control")))
+
+# Stats on lost
+x <- length(unique(tmp_orig$FeatureID)); x
+y <- length(unique(asv_wtax_decon$FeatureID)); y
+100*((y-x)/x) #0.43% of ASVs lost
+a <- sum(tmp_orig$value);a #3.1 million
+b <- sum(asv_wtax_decon$value);b #2.89 million 
+100*((b-a)/a)
+# Lost 5.5% of sequences from whole dataset.
+
+## Subsample to clean ASVs
+asv_wtax_wstats <- gr_substrate_fluid_asvs %>% 
+  mutate(DECONTAM = case_when(
+    FeatureID %in% list_of_contam_asvs ~ "FAIL",
+    TRUE ~ "PASS"
+  ))
+```
+
+```{r, fig.height=12, fig.width=10}
+plot_grid(asv_wtax_wstats %>% 
+  filter(value > 0) %>% 
+  ggplot(aes(x = SAMPLE, fill = DECONTAM)) +
+  geom_bar(stat = "count", width = 0.9, color = "black") +
+  labs(y = "Total ASVs") +
+  coord_flip() +
+  theme_linedraw() +
+  facet_grid(DATASET ~ ., scale = "free", space = "free") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1),
+        strip.background = element_blank(), strip.text = element_text(color = "black"),
+        legend.position = "bottom"),
+  asv_wtax_wstats %>% 
+  group_by(SAMPLE, SITE, DECONTAM, DATASET) %>% 
+  summarise(SUM_SEQ_DOMAIN = sum(value)) %>% 
+  ggplot(aes(x = SAMPLE, y = SUM_SEQ_DOMAIN, fill = DECONTAM)) +
+  geom_bar(stat = "identity", color = "black", width = 0.9) +
+  labs(y = "Total Sequences") +
+  coord_flip() +
+  theme_linedraw() +
+  facet_grid(DATASET ~ ., scale = "free", space = "free") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1),
+        strip.background = element_blank(), strip.text = element_text(color = "black"),
+        legend.position = "bottom"),
+  ncol = 2)
+```
+
+
+# Subset Gorda Ridge Cones and _in situ_
+
+Isolate Gorda Ridge substrate samples and the in situ samples from Mt Edwards, plume at Mt Edwards and the background seawater. Remove in situ
+```{r Isolate in situ only}
+# colnames(asv_wtax_wstats)
+# unique(asv_wtax_wstats$Sample_actual)
+# Isolate blank substrate for GR cones
+
+asv_GR <- asv_wtax_wstats %>% 
+      filter(Sample_or_Control != "Control") %>% # rm controls
+      filter(SITE == "substrate" | VENT == "Mt Edwards" | 
+                VENT == "Mt Edwards Plume" | VENT == "Deep seawater" | VENT == "Shallow seawater") %>% 
+      filter(DATASET != "Axial", DATASET != "MCR") %>% 
+      filter(!grepl("_expTf_", SAMPLE)) %>% 
+      filter(value > 0) %>% 
+      filter(DECONTAM == "PASS") #%>% 
+      # bind_rows(asv_substrate_blanks)
+
+# Get quick stats on totals
+sum(asv_GR$value) # 2.3 million sequences
+length(unique(asv_GR$FeatureID)) #3370 ASVs
+
+# View(asv_GR)
+# unique(asv_GR$VENT)
+```
+
+
+Additional sample QC, check replicates, and determine if replicates should be averaged.
+```{r Investigate sequence and sample QC, fig.height=9, fig.width=14}
+plot_grid(asv_GR %>% 
+  group_by(SAMPLE, VENT, DATASET, SAMPLETYPE, Domain) %>% 
+  summarise(seqsum_var = sum(value),
+            asvcount_var = n()) %>% 
+  pivot_longer(ends_with("_var"), names_to = "VARIABLE") %>% 
+  ggplot(aes(x = SAMPLE, y = value, fill = Domain)) +
+    geom_bar(color = "black", stat = "identity", position = "fill") +
+    facet_grid(VARIABLE ~ SAMPLETYPE, space = "free", scales = "free") +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_linedraw() +
+  scale_fill_brewer(palette = "Paired") +
+  theme(strip.background = element_blank(), strip.text = element_text(color = "black"),
+        axis.text.x = element_text(color = "black", angle = 90, hjust = 1, vjust = 0.5),
+        legend.position = "bottom"),
+  asv_GR %>% 
+  group_by(SAMPLE, VENT, DATASET, SAMPLETYPE, Domain) %>% 
+  summarise(seqsum_var = sum(value),
+            asvcount_var = n()) %>% 
+  pivot_longer(ends_with("_var"), names_to = "VARIABLE") %>% 
+  ggplot(aes(x = SAMPLE, y = value, fill = Domain)) +
+    geom_bar(color = "black", stat = "identity", position = "stack") +
+    facet_grid(VARIABLE ~ SAMPLETYPE, space = "free_x", scales = "free") +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_linedraw() +
+  scale_fill_brewer(palette = "Paired") +
+  theme(strip.background = element_blank(), strip.text = element_text(color = "black"),
+        axis.text.x = element_text(color = "black", angle = 90, hjust = 1, vjust = 0.5),
+        legend.position = "bottom"),
+ncol = 2)
+```
+
+Based on above plot, remove "BSW020" sterivex filter. 
+
+## Taxonomy bar plots
+
+Supergroup distribution by background fluid vs. what was isolated from substrates.
+
+Factor supergroup names
+```{r}
+tmp <- asv_GR %>% 
+  filter(Domain == "Eukaryota") %>%
+  filter(Sample_or_Control != "Control") %>% 
+  # unite(SampleIdentifier, VENT, SAMPLETYPE, sep = " ", remove = FALSE) %>% 
+  mutate(Supergroup = ifelse(is.na(Supergroup), "Unknown Eukaryota", Supergroup),
+         Phylum = ifelse(is.na(Phylum), "Unknown", Phylum),
+         Phylum = ifelse(Phylum == "Alveolata_X", "Ellobiopsidae", Phylum),
+         Supergroup = ifelse(Supergroup == "Alveolata", paste(Supergroup, Phylum, sep = "-"), Supergroup))
+colors_tax <- c("#f1eef6", "#d7b5d8", "#df65b0", "#ce1256", "#fc9272", "#ef3b2c", 
+    "#800026", "#fff7bc", "#fec44f", "#d95f0e", "#a63603", "#74c476", "#238b45", 
+    "#00441b", "#7fcdbb", "#084081", "#c6dbef", "#2b8cbe", "#016c59", "#bcbddc", 
+    "#807dba", "#54278f", "#bdbdbd", "black")
+
+tax_names <- as.character(unique(tmp$Supergroup))
+names(colors_tax) <- tax_names
+```
+
+
+```{r make bar plot back, fig.width=12, fig.height=8}
+# View(asv_GR)
+by_supergroup_back <- asv_GR %>% 
+  filter(Domain == "Eukaryota") %>%
+  filter(Sample_or_Control != "Control") %>% 
+  # unite(SampleIdentifier, VENT, SAMPLETYPE, sep = " ", remove = FALSE) %>% 
+  mutate(Supergroup = ifelse(is.na(Supergroup), "Unknown Eukaryota", Supergroup),
+         Phylum = ifelse(is.na(Phylum), "Unknown", Phylum),
+         Phylum = ifelse(Phylum == "Alveolata_X", "Ellobiopsidae", Phylum),
+         Supergroup = ifelse(Supergroup == "Alveolata", paste(Supergroup, Phylum, sep = "-"), Supergroup)) %>% 
+  group_by(FeatureID, Taxon, Domain, Supergroup, Phylum, Class, Order, Family, Genus, Species,
+           VENT, SITE, SAMPLETYPE, YEAR, DATASET, Type) %>% 
+    summarise(SEQ_AVG_REP = mean(value)) %>% 
+  ungroup() %>% 
+  group_by(SITE, SAMPLETYPE, VENT, Supergroup, Type) %>% 
+    summarise(SEQ_SUM = sum(SEQ_AVG_REP)) %>% 
+  unite(Sample_substrate, VENT, Type, sep = " ") %>% 
+  filter(SITE == "GordaRidge") %>% 
+  ggplot(aes(x = Sample_substrate, y = SEQ_SUM, fill = Supergroup)) +
+    geom_bar(stat = "identity", position = "fill", color = "black", width = 0.6) +
+    facet_grid(. ~ SITE + SAMPLETYPE, space = "free_x", scales = "free") +
+  theme_linedraw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1),
+        strip.background = element_blank(), strip.text = element_text(color = "black")) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values = colors_tax) +
+  labs(title = "Microcolonizers and background", x = "", y = "Relative sequence abundance")
+
+by_supergroup_substrate <- asv_GR %>% 
+  filter(Domain == "Eukaryota") %>%
+  filter(Sample_or_Control != "Control") %>% 
+  # unite(SampleIdentifier, VENT, SAMPLETYPE, sep = " ", remove = FALSE) %>% 
+  mutate(Supergroup = ifelse(is.na(Supergroup), "Unknown Eukaryota", Supergroup),
+         Phylum = ifelse(is.na(Phylum), "Unknown", Phylum),
+         Phylum = ifelse(Phylum == "Alveolata_X", "Ellobiopsidae", Phylum),
+         Supergroup = ifelse(Supergroup == "Alveolata", paste(Supergroup, Phylum, sep = "-"), Supergroup)) %>% 
+  group_by(FeatureID, Taxon, Domain, Supergroup, Phylum, Class, Order, Family, Genus, Species,
+           VENT, SITE, SAMPLETYPE, YEAR, DATASET, Type) %>% 
+    summarise(SEQ_AVG_REP = mean(value)) %>% 
+  ungroup() %>% 
+  group_by(SITE, SAMPLETYPE, VENT, Supergroup, Type) %>% 
+    summarise(SEQ_SUM = sum(SEQ_AVG_REP)) %>% 
+  unite(Sample_substrate, VENT, Type, sep = " ") %>% 
+  filter(SITE != "GordaRidge") %>% 
+  ggplot(aes(x = Sample_substrate, y = SEQ_SUM, fill = Supergroup)) +
+    geom_bar(stat = "identity", position = "fill", color = "black", width = 0.6) +
+    facet_grid(. ~ SITE + SAMPLETYPE, space = "free_x", scales = "free") +
+  theme_linedraw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1),
+        strip.background = element_blank(), strip.text = element_text(color = "black")) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values = colors_tax) +
+  labs(title = "Microcolonizers and background", x = "", y = "Relative sequence abundance")
+
+
+```
+
+### Taxonomy plot of background fluid
+```{r}
+plotly::ggplotly(by_supergroup_back)
+```
+### Taxonomy plot of microcolonizers
+
+```{r}
+plotly::ggplotly(by_supergroup_substrate)
+```
+
+### Plot only metazoa
+```{r plot metazoa only, fig.width=12, fig.height=8}
+metazoa_substrate <- asv_GR %>% 
+  filter(Domain == "Eukaryota") %>%
+  filter(Sample_or_Control != "Control") %>% 
+  mutate(Supergroup = ifelse(is.na(Supergroup), "Unknown Eukaryota", Supergroup),
+         Phylum = ifelse(is.na(Phylum), "Unknown", Phylum),
+         Phylum = ifelse(Phylum == "Alveolata_X", "Ellobiopsidae", Phylum),
+         Supergroup = ifelse(Supergroup == "Alveolata", paste(Supergroup, Phylum, sep = "-"), Supergroup)) %>% 
+  group_by(FeatureID, Taxon, Domain, Supergroup, Phylum, Class, Order, Family, Genus, Species,
+           VENT, SITE, SAMPLETYPE, YEAR, DATASET, Type) %>% 
+    summarise(SEQ_AVG_REP = mean(value)) %>% 
+  # Opisthokonts only
+  filter(Supergroup == "Opisthokonta") %>%
+  unite(Phylum_Class, Phylum, Class, sep = "-") %>% 
+  ungroup() %>% 
+  group_by(SITE, SAMPLETYPE, VENT, Type, Supergroup, Phylum_Class) %>% 
+    summarise(SEQ_SUM = sum(SEQ_AVG_REP)) %>% 
+  unite(Sample_substrate, VENT, Type, sep = " ") %>% 
+  ggplot(aes(x = Sample_substrate, y = SEQ_SUM, fill = Phylum_Class)) +
+    geom_bar(stat = "identity", position = "fill", color = "black", width = 0.9) +
+    facet_grid(. ~ SITE + SAMPLETYPE, scale = "free", space = "free") +
+  theme_linedraw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1),
+        strip.background = element_blank(), strip.text = element_text(color = "black")) +
+  scale_y_continuous(expand = c(0,0)) +
+  # scale_fill_manual(values = c("#f1eef6", "#d7b5d8", "#df65b0", "#ce1256", "#fc9272", "#ef3b2c", 
+  #   "#800026", "#fff7bc", "#fec44f", "#d95f0e", "#a63603", "#74c476", "#238b45", 
+  #   "#00441b", "#7fcdbb", "#084081", "#c6dbef", "#2b8cbe", "#016c59", "#bcbddc", 
+  #   "#807dba", "#54278f", "#bdbdbd", "black")) +
+  labs(title = "Average across replicates", x = "", y = "Relative sequence abundance")
+```
+
+```{r}
+plotly::ggplotly(metazoa_substrate)
+```
+
+# What ASVs are shared across samples?
+```{r}
+library(ggupset)
+```
+
+```{r, fig.height=10, fig.width=13}
+asv_GR %>% 
+  filter(Domain == "Eukaryota") %>%
+  filter(Sample_or_Control != "Control") %>% 
+  mutate(Supergroup = ifelse(is.na(Supergroup), "Unknown Eukaryota", Supergroup),
+         Phylum = ifelse(is.na(Phylum), "Unknown", Phylum),
+         Phylum = ifelse(Phylum == "Alveolata_X", "Ellobiopsidae", Phylum),
+         Supergroup = ifelse(Supergroup == "Alveolata", paste(Supergroup, Phylum, sep = "-"), Supergroup)) %>% 
+  group_by(FeatureID, Supergroup, 
+           VENT, Type) %>% 
+    summarise(SUM = sum(value)) %>% 
+  ungroup() %>%
+  unite(Sample_substrate, VENT, Type, sep = " ") %>% 
+  distinct(FeatureID, Supergroup, SUM, Sample_substrate, .keep_all = TRUE) %>% 
+  group_by(FeatureID, Supergroup) %>% 
+  summarise(Sample_substrate = list(Sample_substrate)) %>% 
+  ggplot(aes(x = Sample_substrate)) +
+    geom_bar(color = "black", width = 0.8, aes(fill = Supergroup)) +
+    scale_x_upset(n_intersections = 30)
+```
+
+```{r, fig.height=10, fig.width=13}
+# unique(asv_GR$VENT)
+asv_GR %>% 
+  filter(Domain == "Eukaryota") %>%
+  filter(!(Type == "")) %>% 
+  filter(Sample_or_Control != "Control") %>% 
+  mutate(Supergroup = ifelse(is.na(Supergroup), "Unknown Eukaryota", Supergroup),
+         Phylum = ifelse(is.na(Phylum), "Unknown", Phylum),
+         Phylum = ifelse(Phylum == "Alveolata_X", "Ellobiopsidae", Phylum),
+         Supergroup = ifelse(Supergroup == "Alveolata", paste(Supergroup, Phylum, sep = "-"), Supergroup)) %>% 
+  group_by(FeatureID, Supergroup, 
+           VENT, Type) %>% 
+    summarise(SUM = sum(value)) %>% 
+  ungroup() %>%
+  unite(Sample_substrate, VENT, Type, sep = " ") %>% 
+  distinct(FeatureID, Supergroup, SUM, Sample_substrate, .keep_all = TRUE) %>% 
+  group_by(FeatureID, Supergroup) %>% 
+  summarise(Sample_substrate = list(Sample_substrate)) %>% 
+  ggplot(aes(x = Sample_substrate)) +
+    geom_bar(color = "black", width = 0.8, aes(fill = Supergroup)) +
+    scale_x_upset(n_intersections = 30)
+```
+
+# Import temperature data and other information for each microcolonizer
+ibuttons deployed with each microcolonizer.
+
+```{r}
+sample_list <- read.delim("input-data/MC-samplelist.txt")
+sample_metadata <- read.delim("input-data/MC-collect-info.txt")
+amy <- c("Quartz1", "Basalt", "Olivine", "Pyrite")
+sample_list_complete <- sample_list %>% 
+  left_join(sample_metadata) %>% 
+  separate(Sample_type, c("Sample_material", "Sample_type"), sep = "-") %>% 
+  mutate(sample_purpose = case_when(
+    (Sample_material %in% amy & Sample_type == "DNA") ~ "16S",
+    (!(Sample_material %in% amy) & Sample_type == "DNA") ~ "18S",
+    (Sample_material %in% amy & Sample_type == "SEM") ~ "Prok SEM",
+    (!(Sample_material %in% amy) & Sample_type == "SEM") ~ "Euk SEM"
+  ))
+# write_delim(sample_list_complete, path = "sample-list-MC.txt", delim = "\t")
+```
+## Process ibutton data
+```{r}
+list_mc <- read.delim("input-data/microcolonizer_list.txt")
+head(list_mc)
+```
+Deployment of all Microcolonizers was at 2019-05-29, 20:59:57.659 (UTC) (also 8:59 PM UTC), which is 4:59PM EST or 16:59 PM EST
+
+Function to import all ibutton data raw and process.
+```{r}
+# Recovered microcolonizers by ibutton IDs:
+## 1, 2, 3, 4, 5, 6
+recovered <- c("2019-06-05 14:19:00","2019-06-04 16:04:00","2019-06-04 16:11:00","2019-06-05 14:23:00","2019-06-06 18:28:00","2019-06-06 18:31:00")
+# Sys.timezone()
+# tmp_2 <- logger2 %>% add_column(MC = 2)
+# 
+# logger1 <- read.csv("input-data/Logger1Data.csv", skip = 19)
+# logger2 <- read.csv("input-data/Logger2Data.csv", skip = 19)
+# x <- 1
+mc_ids <- c(1, 2, 3, 4, 5, 6)
+
+for(num in mc_ids){
+  log_file <- read.csv(paste("input-data/Logger", num, "Data.csv", sep = ""), skip = 19)  
+  cat("Reading in log file number", num, "\n")
+  log_out <- log_file %>% 
+    add_column(MC = num) %>% 
+    mutate(Parsed_time_EST = parse_date_time(Date.Time, "%m/%d/%y %H:%M:%S p", tz = "America/New_York")) %>%
+    # Filter out irrelevant date before deployment
+    filter(Parsed_time_EST > "2019-05-29 18:59:00") %>% 
+    filter(
+      Parsed_time_EST < recovered[[num]]
+    )
+  if(!exists("log_files_all")){
+    log_files_all <- log_out
+  } else{
+    log_files_all <- bind_rows(log_files_all, log_out)
+  }
+}
+# rm(log_out); rm(log_files_all)
+# head(log_out)
+# View(log_files_all)
+
+
+# Factor by colors and pairs of MCs
+log_files_all$MC_ORDER <- factor(log_files_all$MC, levels = mc_ids)
+mc_col <- c("#d7301f", "#4a1486", "#9e9ac8", "#fc8d59", "#2171b5", "#6baed6")
+names(mc_col) <- mc_ids
+
+```
+
+Graph microcolonizer temperatures.
+```{r}
+ggplot(log_files_all, aes(x = Parsed_time_EST, y = Value, group = as.factor(MC_ORDER), color = as.factor(MC_ORDER))) +
+  geom_path() +
+  scale_color_manual(values = mc_col) +
+  theme_classic(base_size = 14) +
+  labs(x = "", y = "Temperature •C") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.title = element_blank())
+```
+
+## Temperature data
+```{r}
+ggplot(log_files_all, aes(x = Parsed_time_EST, y = Value, color = as.factor(MC_ORDER))) +
+  geom_step() +
+  scale_color_manual(values = mc_col) +
+  theme_classic(base_size = 14) +
+  labs(x = "", y = "Temperature •C") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.title = element_blank())
+# ?geom_smooth
+```
+
+
+
+
+
+
+
+
+# Session end
+```{r}
+sessionInfo()
+```
+
