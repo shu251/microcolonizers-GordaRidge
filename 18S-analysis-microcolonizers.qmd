@@ -1,0 +1,62 @@
+---
+title: "Microcolonizers"
+format: html
+editor: visual
+---
+
+# Set up
+
+```{r}
+library(tidyverse)
+library(phyloseq)
+# library(decontam)
+```
+
+```{r}
+merged_tax <- read_delim("../microeuks_deepbiosphere_datamine/microeuk-amplicon-survey/data-input/taxonomy.tsv", delim = "\t")
+
+merged_asv <- read_delim("../microeuks_deepbiosphere_datamine/microeuk-amplicon-survey/data-input/microeuk-merged-asv-table.tsv", delim = "\t", skip = 1)
+
+metadata <- read.delim("../microeuks_deepbiosphere_datamine/microeuk-amplicon-survey/data-input/samplelist-metadata.txt")
+ 
+asv_wtax <- merged_asv %>%
+  select(FeatureID = '#OTU ID', everything()) %>%
+  pivot_longer(cols = !FeatureID,
+               names_to = "SAMPLE", values_to = "value") %>%
+  left_join(merged_tax, by = c("FeatureID" = "Feature ID")) %>%
+  left_join(metadata) %>%
+  filter(SITE == "GordaRidge" | SITE == "substrate" | SITE == "Laboratory") %>%
+  filter(!grepl("Siders_", SAMPLE)) %>%
+  filter(!(grepl("T0", SAMPLE))) %>%
+  filter(!(grepl("T24", SAMPLE))) %>%
+  filter(!(grepl("T36", SAMPLE))) %>%
+  mutate(DATASET = case_when(
+    grepl("_GR_", SAMPLE) ~ "GR",
+    grepl("Gorda", SAMPLE) ~ "GR",
+    grepl("_MCR_", SAMPLE) ~ "MCR",
+    grepl("Axial", SAMPLE) ~ "Axial",
+  TRUE ~ "Control or blank")) %>%
+    separate(Taxon, c("Domain", "Supergroup",
+                  "Phylum", "Class", "Order",
+                  "Family", "Genus", "Species"), sep = ";", remove = FALSE)
+
+# fix naming, some controls sequenced separately.
+gr_substrate_fluid_asvs <- asv_wtax %>%
+  mutate(SAMPLE_tmp = case_when(
+    Sample_actual == "" ~ SAMPLE,
+    TRUE ~ Sample_actual
+  )) %>%
+  select(-SAMPLE) %>%
+  select(SAMPLE = SAMPLE_tmp, everything()) %>%
+  filter(value > 0)
+
+# save(gr_substrate_fluid_asvs, file = "input-data/gordaridge_18S_asvs.RData")
+```
+
+# Import microcolonizer data
+
+```{r}
+load("input-data/asv-table.RData", verbose = TRUE)
+```
+
+

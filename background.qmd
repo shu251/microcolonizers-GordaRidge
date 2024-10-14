@@ -1,0 +1,52 @@
+---
+title: "Background"
+format: html
+editor: visual
+---
+
+# Background information
+
+Microcolonizers (or 'cones') were deployed at the Gorda Ridge hydrothermal vent field. Each microcolonizer was placed over a region of visible diffuse fluid flow. A total of 6 microcolonizers were depeloyed at one time, pairs of experiments were picked up after 6, 7, and 8 days.
+
+
+Each microcolonizer chamber had 6 different substrates, so that diffuse fluid could reach each substrate. Temperature loggers also recorded temperature for the duration of the deployments. Substrates included: shell, riftia shell, quartz, pyrite, basalt, and olivine.
+
+```{r out.width ="40%", echo=FALSE, fig.cap="Microcolonizers at Mt. Edwards vent site. Credit: Ocean Exploration Trust"}
+knitr::include_graphics("images/mtedwards.png")
+```
+
+
+```{r out.width ="40%", echo=FALSE, fig.cap="Recovering microcolonizers with ROV Hercules. Credit: Ocean Exploration Trust"}
+knitr::include_graphics("images/recovery.png")
+```
+
+Upon recovery of each experiment, substrates were saved for microscopy and molecular analysis. For the sequence data below (shell, quartz, and riftia), RNA was extracted, cDNA was created and the V4 18S rRNA hypervariable region was amplified and sequenced. Blank substrates (which sat with milliQ during the shipboard processing)  were also sequenced alongside the experimental treatments.
+
+```{r out.width ="40%", echo=FALSE, fig.cap="Opening up microcolonizers after recovery. Credit: Mirmalek"}
+knitr::include_graphics("images/20190604_SUBSEA_NA108_Dive4_SarahData_Mirmalek5184.JPG")
+```
+
+## Core questions (related to protists)
+
+* How does the microcolonizer community compare to the background, plume, and diffuse fluid community? How does it compare to the resident or cosmpolitan community?
+* If shared, do we know if these species have specific traits that would enable them to settle? Are there any other unifying traits for species detected at the substrate vs. diffuse fluid?
+* How does the community composition change over deployment length? 6, 7, vs. 8 days? Does temperature play a role in this?
+* What species are detected across substrate types? vs. only found at 1 type of substrate?
+* For specific taxa like ciliates and metazoa, that make up a large proportion of the substrate community, how does species richness and evenness compare across substrate vs. vent fluid?
+* Are differences in community composition & diversity at the substrates similar with the 18S vs. 16S data?
+* What are the most commonly occurring pairs of 16S and 18S amplicons?
+
+
+_Approach_
+* Explore above questions with molecular data, include a combined approach with 16S and 18S. Start with 18S rRNA gene tag-sequence data first.
+* Pinpoint a few samples to explore for microscopy?
+* A very cool goal would be to do the network analyses and characterization of community composition and then capture the same or related organisms microscopically.
+* Explore bodonids and related taxa, especially paying attention to parasites.
+* Also look for saprophytes (fungi)
+* Examine pictures closer and look for presence of potential parasites to the limpets, else?
+
+_Hypotheses_
+
+* In a previous microcolonizer experiment where organic, iron-rich, vs. mineral substrates were placed at a hydrothermal vent site, the molecular analysis did not show a significant difference in the community composition across substrates (Lopez-Garcia et al.). They found that within only 2 weeks, microaerophilic bodonids and ciliatese pioneereed the colonization process.
+* Diversity of protists included: bodonids (Kinetoplastida), alveolatees (specifically ciliates, Perkinsozoa, Group I), metazoa, fungi, and radiolaria. Many divergent eukaryotic lineages.
+* In the previous study, a similar composition of taxa were found in the surrounding vent fluid and settled on the substrate. But there wree different metazoa (mainly polychaetes)
