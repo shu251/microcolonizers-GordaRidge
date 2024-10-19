@@ -660,10 +660,10 @@ barplot(variance_lr, main = "Log-Ratio PCA Screeplot", xlab = "PC Axis", ylab = 
 ```
 ```{r, fig.height=4, fig.width=6}
 ## Extract PCR points
-data.frame(pca_lr$x, SAMPLE = rownames(pca_lr$x)) %>% 
+PCA <- data.frame(pca_lr$x, SAMPLE = rownames(pca_lr$x)) %>% 
       separate(SAMPLE, into = c("MC", "Substrate", "Days"), sep = "_") %>% 
   ## Generate PCA plot
-  ggplot(aes(x = PC1, y = PC2, shape = Substrate, fill = Days)) +
+  ggplot(aes(x = PC1, y = PC2, shape = Substrate, fill = Days, label = MC)) +
     geom_hline(yintercept = 0) + geom_vline(xintercept = 0, color = "#525252") +
     geom_point(size=4, stroke = 1, aes(fill = Days)) +
     ylab(paste0('PC2 ',round(variance_lr[2]*100,2),'%')) +
@@ -676,7 +676,10 @@ data.frame(pca_lr$x, SAMPLE = rownames(pca_lr$x)) %>%
           legend.text = element_text(color = "black", size = 14),
           plot.margin = margin(2, 1, 2, 1, "cm")) +
     guides(fill = guide_legend(override.aes = list(shape = 21) ),
-              shape = guide_legend(override.aes = list(fill = "black")))
+              shape = guide_legend(override.aes = list(fill = "black"))) + 
+  ggrepel::geom_text_repel(data = MC)
+
+PCA
 ```
 
 > After 6 days, there were minor differences in the communities, but than at 7 and 8 days, there were more. This may not be a great indicator, as the microcolonizers collected on day 6 were both situated at higher temperatures. This shows that compared to the microcolonizers placed at sites of cooler diffuse fluid flow, substrates subject to warmer diffuse fluid had a more similar composition to one another.
@@ -761,14 +764,22 @@ ggplot(log_files_all, aes(x = Parsed_time_EST, y = Value, group = as.factor(MC_O
 
 ## Temperature data
 ```{r}
-ggplot(log_files_all, aes(x = Parsed_time_EST, y = Value, color = as.factor(MC_ORDER))) +
+temps <- ggplot(log_files_all, aes(x = Parsed_time_EST, y = Value, color = as.factor(MC_ORDER))) +
   geom_step() +
   scale_color_manual(values = mc_col) +
   theme_classic(base_size = 14) +
   labs(x = "", y = "Temperature •C") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
         legend.title = element_blank())
-# ?geom_smooth
+temps
+```
+
+
+# Next steps
+
+```{r, fig.height=7, fig.width=5}
+#library(patchwork)
+PCA + temps + patchwork::plot_layout(ncol  = 1)
 ```
 
 

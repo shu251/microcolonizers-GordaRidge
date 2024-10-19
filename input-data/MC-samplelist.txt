@@ -1,0 +1,85 @@
+MC_ID	Sample_type	Processing
+MC1	Basalt-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC1	Olivine-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC1	Olivine-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC1	Quartz1-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC1	Quartz2-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC1	Riftia-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC1	Shell-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC1	Basalt-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC1	Olivine-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC1	Olivine-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC1	Quartz1-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC1	Quartz2-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC1	Riftia-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC1	Shell-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC2	Basalt-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC2	Olivine-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC2	Olivine-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC2	Quartz1-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC2	Quartz2-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC2	Riftia-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC2	Shell-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC2	Basalt-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC2	Olivine-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC2	Olivine-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC2	Quartz1-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC2	Quartz2-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC2	Riftia-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC2	Shell-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC3	Basalt-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC3	Olivine-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC3	Olivine-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC3	Quartz1-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC3	Quartz2-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC3	Riftia-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC3	Shell-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC3	Basalt-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC3	Olivine-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC3	Olivine-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC3	Quartz1-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC3	Quartz2-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC3	Riftia-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC3	Shell-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC4	Basalt-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC4	Pyrite-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC4	Pyrite-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC4	Quartz1-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC4	Quartz2-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC4	Riftia-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC4	Shell-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC4	Basalt-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC4	Pyrite-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC4	Pyrite-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC4	Quartz1-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC4	Quartz2-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC4	Riftia-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC4	Shell-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC5	Basalt-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC5	Pyrite-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC5	Pyrite-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC5	Quartz1-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC5	Quartz2-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC5	Riftia-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC5	Shell-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC5	Basalt-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC5	Pyrite-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC5	Pyrite-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC5	Quartz1-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC5	Quartz2-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC5	Riftia-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC5	Shell-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC6	Basalt-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC6	Pyrite-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC6	Pyrite-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC6	Quartz1-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC6	Quartz2-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC6	Riftia-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC6	Shell-DNA	Frozen dry in 1.5ml cyrovial, -80C
+MC6	Basalt-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC6	Pyrite-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC6	Pyrite-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC6	Quartz1-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC6	Quartz2-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC6	Riftia-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
+MC6	Shell-SEM	Incubated with 4% PFA, rinsed with 1X PBS, and stored in 1:1 EtOH:PBS
