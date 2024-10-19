@@ -1,0 +1,33 @@
+---
+title: "microcolonizer analysis"
+format: html
+editor: visual
+---
+
+# Set up R environment
+
+```{r}
+library(tidyverse)
+library(phyloseq)
+```
+
+## Import all data
+
+```{r}
+load("input-data/GR_Microcolonizer_data.RData", verbose = TRUE)
+load("input-data/temp-data.RData", verbose = TRUE)
+```
+
+`asv_wtax_18` data includes hydrothermal vents from Gorda Ridge in addition to the microcolonizers.
+
+
+# Subset only Microcolonizer data
+
+```{r}
+mc_18s <- asv_wtax_18 |> 
+  filter(SAMPLETYPE == "Microcolonizer")
+# head(mc_18s)
+
+# 16S data is only from microcolonizers
+```
+

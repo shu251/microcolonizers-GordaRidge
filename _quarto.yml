@@ -1,0 +1,29 @@
+project:
+  type: website
+  output-dir: docs
+  render:
+    - import-qc-metabarcoding.qmd
+    - background.qmd
+    - index.qmd
+
+website:
+  title: "Microcolonizers"
+  navbar:
+    left:
+      - href: background.qmd
+        text: Home
+      - href: index.qmd
+        text: Summary of results
+      - href: import-qc-metabarcoding.qmd
+
+format:
+  html:
+    theme: pulse
+    css: styles.css
+    code-fold: false
+    toc: true
+    toc-location: left
+    number-sections: true
+    number-depth: 2
+
+

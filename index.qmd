@@ -1,0 +1,220 @@
+---
+title: "home"
+format: html
+editor: visual
+execute: 
+  eval: false
+---
+
+
+
+# Introduction
+
+
+
+# QIIME2 processing
+
+List of all commands used in QIIME2 (2023.2). Run on the TAMU HPRC using the SLUMR job scheduler.
+
+```{r}
+module load QIIME2/2023.2
+
+qiime tools import \
+  --type 'SampleData[PairedEndSequencesWithQuality]' \
+  --input-path /home/skhu/16s-microcolonizer/manifest-16s.txt \
+  --output-path /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/paired-end-input.qza \
+  --input-format PairedEndFastqManifestPhred33V2
+
+qiime demux summarize \
+  --i-data /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/paired-end-input.qza \
+  --o-visualization /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/paired-end-input.qzv
+
+echo "Use cutadapt to remove primer sequences"
+
+qiime cutadapt trim-paired \
+  --i-demultiplexed-sequences /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/paired-end-input.qza \
+  --p-cores $SLURM_CPUS_PER_TASK \
+  --p-front-f GTGYCAGCMGCCGCGGTAA \
+  --p-front-r GGACTACNVGGGTWTCTAAT \
+  --p-error-rate 0.1 \
+  --p-overlap 3 \
+  --p-match-adapter-wildcards \
+  --o-trimmed-sequences /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/paired-end-input-trimmed.qza
+
+# Grab trim stats from cutadapt
+qiime demux summarize \
+  --i-data /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/paired-end-input-trimmed.qza \
+  --o-visualization /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/paired-end-input-trimmed.qzv
+
+
+echo "Starting DADA2 denoising, error prediction, chimera removal, and ASV determination..."
+
+qiime dada2 denoise-paired \
+  --i-demultiplexed-seqs /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/paired-end-input-trimmed.qza \
+  --p-trunc-len-f 190 \
+  --p-trunc-len-r 180 \
+  --p-max-ee-f 2 \
+  --p-max-ee-r 2 \
+  --p-min-overlap 10 \
+  --p-pooling-method independent \
+  --p-n-reads-learn 1000000 \
+  --p-n-threads $SLURM_CPUS_PER_TASK \
+  --p-chimera-method pooled \
+  --o-table /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/paired-end-input-asv-table.qza \
+  --o-representative-sequences /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/paired-end-input-asvs-ref-seqs.qza \
+  --o-denoising-stats /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/paired-end-input-dada2-stats.qza
+
+
+
+echo "DADA2 complete"
+
+
+qiime tools export \
+    --input-path /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/paired-end-input-asv-table.qza \
+    --output-path /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/output-tables/
+
+biom convert -i /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/output-tables/feature-table.biom \
+    -o /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/output-tables/samples16s-asv-table.tsv \
+    --to-tsv
+
+qiime metadata tabulate \
+       --m-input-file /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/paired-end-input-dada2-stats.qza \
+       --o-visualization /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/paired-end-input-dada2-stats.qzv
+
+
+echo "Done re-formatting files"
+  
+#Downloaded QIIME2 ready silva database
+
+echo "Assign taxonomy"
+
+qiime feature-classifier classify-consensus-vsearch \
+    --i-query /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/paired-end-input-asvs-ref-seqs.qza \
+    --i-reference-reads /scratch/group/hu-lab/databases/silva/silva-138-99-seqs.qza \
+    --i-reference-taxonomy /scratch/group/hu-lab/databases/silva/silva-138-99-tax.qza \
+    --output-dir /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/taxonomy-0.9_0.8 \
+    --p-threads $SLURM_CPUS_PER_TASK \
+    --p-maxaccepts 10 \
+    --p-perc-identity 0.90 \
+    --p-min-consensus 0.80
+
+
+echo "Completed taxonomy assignment. Reformatting output."
+
+qiime tools export \
+    --input-path /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/taxonomy-0.9_0.8/search_results.qza \
+    --output-path /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/taxonomy-0.9_0.8/search_results_16s
+
+qiime tools export \
+  --input-path /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/taxonomy-0.9_0.8/classification.qza \
+  --output-path /scratch/group/hu-lab/data/microcolonizers_gordaridge2019/qiime2-outputs/taxonomy-0.9_0.8/classification-16s
+
+
+echo "Done re-formatting files"
+
+```
+
+
+# Import temperature data and other information for each microcolonizer
+ibuttons deployed with each microcolonizer.
+
+```{r}
+sample_list <- read.delim("input-data/MC-samplelist.txt")
+sample_metadata <- read.delim("input-data/MC-collect-info.txt")
+amy <- c("Quartz1", "Basalt", "Olivine", "Pyrite")
+sample_list_complete <- sample_list %>% 
+  left_join(sample_metadata) %>% 
+  separate(Sample_type, c("Sample_material", "Sample_type"), sep = "-") %>% 
+  mutate(sample_purpose = case_when(
+    (Sample_material %in% amy & Sample_type == "DNA") ~ "16S",
+    (!(Sample_material %in% amy) & Sample_type == "DNA") ~ "18S",
+    (Sample_material %in% amy & Sample_type == "SEM") ~ "Prok SEM",
+    (!(Sample_material %in% amy) & Sample_type == "SEM") ~ "Euk SEM"
+  ))
+write_delim(sample_list_complete, file = "sample-list-MC.txt", delim = "\t")
+```
+
+
+## Process ibutton data
+```{r}
+list_mc <- read.delim("input-data/microcolonizer_list.txt")
+head(list_mc)
+```
+
+Deployment of all Microcolonizers was at 2019-05-29, 20:59:57.659 (UTC) (also 8:59 PM UTC), which is 4:59PM EST or 16:59 PM EST
+
+Function to import all ibutton data raw and process.
+
+```{r}
+# Recovered microcolonizers by ibutton IDs:
+## 1, 2, 3, 4, 5, 6
+recovered <- c("2019-06-05 14:19:00","2019-06-04 16:04:00","2019-06-04 16:11:00","2019-06-05 14:23:00","2019-06-06 18:28:00","2019-06-06 18:31:00")
+# Sys.timezone()
+# tmp_2 <- logger2 %>% add_column(MC = 2)
+# 
+# logger1 <- read.csv("input-data/Logger1Data.csv", skip = 19)
+# logger2 <- read.csv("input-data/Logger2Data.csv", skip = 19)
+# x <- 1
+mc_ids <- c(1, 2, 3, 4, 5, 6)
+
+for(num in mc_ids){
+  log_file <- read.csv(paste("input-data/Logger", num, "Data.csv", sep = ""), skip = 19)  
+  cat("Reading in log file number", num, "\n")
+  log_out <- log_file %>% 
+    add_column(MC = num) %>% 
+    mutate(Parsed_time_EST = parse_date_time(Date.Time, "%m/%d/%y %H:%M:%S p", tz = "America/New_York")) %>%
+    # Filter out irrelevant date before deployment
+    filter(Parsed_time_EST > "2019-05-29 18:59:00") %>% 
+    filter(
+      Parsed_time_EST < recovered[[num]]
+    )
+  if(!exists("log_files_all")){
+    log_files_all <- log_out
+  } else{
+    log_files_all <- bind_rows(log_files_all, log_out)
+  }
+}
+# rm(log_out); rm(log_files_all)
+# head(log_out)
+# View(log_files_all)
+
+
+# Factor by colors and pairs of MCs
+log_files_all$MC_ORDER <- factor(log_files_all$MC, levels = mc_ids)
+mc_col <- c("#d7301f", "#4a1486", "#9e9ac8", "#fc8d59", "#2171b5", "#6baed6")
+names(mc_col) <- mc_ids
+```
+
+Graph microcolonizer temperatures.
+```{r}
+ggplot(log_files_all, aes(x = Parsed_time_EST, y = Value, group = as.factor(MC_ORDER), color = as.factor(MC_ORDER))) +
+  geom_path() +
+  scale_color_manual(values = mc_col) +
+  theme_classic(base_size = 14) +
+  labs(x = "", y = "Temperature •C") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.title = element_blank())
+```
+
+
+### Temperature data
+```{r}
+temps <- ggplot(log_files_all, aes(x = Parsed_time_EST, y = Value, color = as.factor(MC_ORDER))) +
+  geom_step() +
+  scale_color_manual(values = mc_col) +
+  theme_classic(base_size = 14) +
+  labs(x = "", y = "Temperature •C") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.title = element_blank())
+temps
+```
+
+```{r}
+save(log_files_all, file = "input-data/temp-data.RData")
+```
+
+
+# Session end
+```{r}
+sessionInfo()
+```

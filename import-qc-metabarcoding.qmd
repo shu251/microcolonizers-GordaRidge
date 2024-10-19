@@ -1,0 +1,219 @@
+---
+title: "Process metabarcoding data"
+format: html
+editor: visual
+execute: 
+  eval: false
+---
+
+# Obtain 18S rRNA data from prior sequence run
+
+R libraries
+
+```{r}
+library(tidyverse)
+library(phyloseq)
+library(decontam)
+```
+
+```{r}
+merged_tax <- read_delim("../microeuks_deepbiosphere_datamine/microeuk-amplicon-survey/data-input/taxonomy.tsv", delim = "\t")
+
+merged_asv <- read_delim("../microeuks_deepbiosphere_datamine/microeuk-amplicon-survey/data-input/microeuk-merged-asv-table.tsv", delim = "\t", skip = 1)
+
+metadata <- read.delim("../microeuks_deepbiosphere_datamine/microeuk-amplicon-survey/data-input/samplelist-metadata.txt")
+ 
+asv_wtax <- merged_asv %>%
+  select(FeatureID = '#OTU ID', everything()) %>%
+  pivot_longer(cols = !FeatureID,
+               names_to = "SAMPLE", values_to = "value") %>%
+  left_join(merged_tax, by = c("FeatureID" = "Feature ID")) %>%
+  left_join(metadata) %>%
+  filter(SITE == "GordaRidge" | SITE == "substrate" | SITE == "Laboratory") %>%
+  filter(!grepl("Siders_", SAMPLE)) %>%
+  filter(!(grepl("T0", SAMPLE))) %>%
+  filter(!(grepl("T24", SAMPLE))) %>%
+  filter(!(grepl("T36", SAMPLE))) %>%
+  mutate(DATASET = case_when(
+    grepl("_GR_", SAMPLE) ~ "GR",
+    grepl("Gorda", SAMPLE) ~ "GR",
+    grepl("_MCR_", SAMPLE) ~ "MCR",
+    grepl("Axial", SAMPLE) ~ "Axial",
+  TRUE ~ "Control or blank")) %>%
+    separate(Taxon, c("Domain", "Supergroup",
+                  "Phylum", "Class", "Order",
+                  "Family", "Genus", "Species"), sep = ";", remove = FALSE)
+
+# fix naming, some controls sequenced separately.
+gr_substrate_fluid_asvs <- asv_wtax %>%
+  mutate(SAMPLE_tmp = case_when(
+    Sample_actual == "" ~ SAMPLE,
+    TRUE ~ Sample_actual
+  )) %>%
+  select(-SAMPLE) %>%
+  select(SAMPLE = SAMPLE_tmp, everything()) %>%
+  filter(value > 0)
+
+# save(gr_substrate_fluid_asvs, file = "input-data/gordaridge_18S_asvs.RData")
+```
+
+## Run decontam on 18S rRNA data
+
+## Decontaminate sequence library
+
+Import sample description text file, import as phyloseq library, and remove potential contaminate ASVs and sequences. Catalog total number of ASVs and sequences removed from analysis.
+
+### Import as phyloseq objects
+
+```{r Extract taxa and sample info as matrix for phyloseq input}
+# head(gr_substrate_fluid_asvs)
+tax_matrix <- gr_substrate_fluid_asvs %>% 
+  select(FeatureID, Taxon) %>% 
+  distinct() %>% 
+  separate(Taxon, c("Domain", "Supergroup", 
+                  "Phylum", "Class", "Order",
+                  "Family", "Genus", "Species"), sep = ";", remove = FALSE) %>% 
+  column_to_rownames(var = "FeatureID") %>% 
+  as.matrix
+
+asv_matrix <- gr_substrate_fluid_asvs %>% 
+  select(FeatureID, SAMPLE, value) %>% 
+  pivot_wider(names_from = "SAMPLE", values_fill = 0, values_from = value) %>% 
+  column_to_rownames(var = "FeatureID") %>% 
+  as.matrix
+
+# Align row names for each matrix
+rownames(tax_matrix) <- row.names(asv_matrix)
+
+metadata_cones <- gr_substrate_fluid_asvs %>% 
+  select(SAMPLE, Type, VENT, SITE, SAMPLETYPE, Sample_or_Control) %>% 
+  distinct() %>% 
+  column_to_rownames(var = "SAMPLE")
+```
+
+```{r Phyloseq import}
+# Import asv and tax matrices
+ASV = otu_table(asv_matrix, taxa_are_rows = TRUE)
+TAX = tax_table(tax_matrix)
+phylo_obj <- phyloseq(ASV, TAX)
+
+# Import metadata as sample data in phyloseq
+samplenames <- sample_data(metadata_cones)
+
+# join as phyloseq object
+physeq_wnames = merge_phyloseq(phylo_obj, samplenames)
+```
+
+### Identify contaminant ASVs
+
+In addition to shipboard milliQ blank samples, each substrate type had a 'blank' control, which was sampled at the same time, but never deployed in the microcolonizers (only processed at the same time in the lab).
+
+```{r Assign control samples}
+# When "Control" appears in "Sample_or_Control column, this is a negative control"
+sample_data(physeq_wnames)$is.neg <- sample_data(physeq_wnames)$Sample_or_Control == "Control"
+```
+
+```{r Identify contaminant ASVs}
+# ID contaminants using Prevalence information
+contam_prev <- isContaminant(physeq_wnames, 
+                               method="prevalence", 
+                               neg="is.neg", 
+                               threshold = 0.5, normalize = TRUE) 
+
+# Report number of ASVs IDed as contamintants
+table(contam_prev$contaminant)
+```
+
+> 0.5 - this threshold will ID contaminants in all samples that are more prevalent in negative controls than in positive samples.
+
+### Remove problematic ASVs
+
+```{r Assign contaminant ASVs}
+# Subset contaminant ASVs
+contams <- filter(contam_prev, contaminant == "TRUE")
+list_of_contam_asvs <- as.character(row.names(contams))
+# length(list_of_contam_asvs)
+
+taxa_contam <- as.data.frame(tax_matrix) %>% 
+  rownames_to_column(var = "FeatureID") %>% 
+  filter(FeatureID %in% list_of_contam_asvs)
+# head(taxa_contam)
+```
+
+```{r Compare decontaminated data with original}
+# View(asv_wtax)
+asv_wtax_decon <- gr_substrate_fluid_asvs %>% 
+  filter(!(FeatureID %in% list_of_contam_asvs)) %>% 
+  filter(!(Sample_or_Control == "Control"))
+
+tmp_orig <- (gr_substrate_fluid_asvs %>% filter(!(Sample_or_Control == "Control")))
+
+# Stats on lost
+x <- length(unique(tmp_orig$FeatureID)); x
+y <- length(unique(asv_wtax_decon$FeatureID)); y
+100*((y-x)/x) #0.43% of ASVs lost
+a <- sum(tmp_orig$value);a #3.1 million
+b <- sum(asv_wtax_decon$value);b #2.89 million 
+100*((b-a)/a)
+# Lost 5.5% of sequences from whole dataset.
+
+## Subsample to clean ASVs
+asv_wtax_wstats <- gr_substrate_fluid_asvs %>% 
+  mutate(DECONTAM = case_when(
+    FeatureID %in% list_of_contam_asvs ~ "FAIL",
+    TRUE ~ "PASS"
+  ))
+```
+
+## QC 18S rRNA gene dataset
+
+```{r}
+head(asv_wtax_wstats)
+
+asv_wtax_18 <- asv_wtax_wstats |> 
+  filter(Sample_or_Control == "Sample") |> 
+  filter(DECONTAM == "PASS") |> 
+  select(SAMPLE, FeatureID, SEQUENCE_COUNT = value, Taxon, Domain,
+         Supergroup, Phylum, Class, Order, Family, Genus, Species, VENT, COORDINATES, SITE, SAMPLEID, SAMPLETYPE, DEPTH, temp, pH, percseawater, mg, h2, h2s, ch4, ProkConc, MC = Type) |> 
+  add_column(dataset = "18S") |> 
+  mutate(Substrate = case_when(
+    SAMPLETYPE == "Microcolonizer" ~ VENT
+  ))
+```
+
+# Obtain 16S rRNA data frames
+
+```{r}
+df_16 <- read_delim("input-data/samples16s-asv-table.tsv", delim = "\t", skip = 1)
+head(df_16)
+tax_16 <- read_delim("input-data/taxonomy.tsv", delim = "\t")
+head(tax_16)
+```
+
+```{r}
+metadata_16s <- read.csv("input-data/manifest-16s.csv")
+# head(metadata_16s)
+```
+
+```{r}
+head(tax_16)
+```
+
+```{r}
+asv_wtax_16 <- df_16 |> 
+  select(`Feature ID` = `#OTU ID`, everything()) |> 
+  left_join(tax_16) |> 
+  pivot_longer(cols = starts_with("MC"), names_to = "SAMPLES", values_to = "SEQUENCE_COUNT") |> 
+  select(FEATUREID = `Feature ID`, Taxon, SAMPLES, SEQUENCE_COUNT) |> 
+  mutate(TAXON = str_replace_all(Taxon, ".__", "")) |> 
+  separate(TAXON, into = c("Domain", "Phylum", "Class", "Order", "Family", "Genus", "Species"), remove = FALSE, sep = "; ") |> 
+  left_join((metadata_16s |> select(SAMPLES = `sample.id`, MC, Substrate))) |> 
+  mutate(MC = paste("MC", MC, sep = "")) |> 
+  add_column(dataset = "16S")
+
+# head(asv_wtax_16)
+```
+
+```{r}
+save(asv_wtax_16, asv_wtax_18, file = "input-data/GR_Microcolonizer_data.RData")
+```
