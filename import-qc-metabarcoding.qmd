@@ -168,7 +168,7 @@ asv_wtax_wstats <- gr_substrate_fluid_asvs %>%
 ## QC 18S rRNA gene dataset
 
 ```{r}
-head(asv_wtax_wstats)
+# head(asv_wtax_wstats)
 
 asv_wtax_18 <- asv_wtax_wstats |> 
   filter(Sample_or_Control == "Sample") |> 
@@ -183,37 +183,50 @@ asv_wtax_18 <- asv_wtax_wstats |>
 
 # Obtain 16S rRNA data frames
 
+## Import all 16S rRNA tag data
+
+This includes from Gorda Ridge and substrates.
 ```{r}
-df_16 <- read_delim("input-data/samples16s-asv-table.tsv", delim = "\t", skip = 1)
-head(df_16)
 tax_16 <- read_delim("input-data/taxonomy.tsv", delim = "\t")
-head(tax_16)
 ```
 
+```{r}
+asv_16s_gr <- read_delim("input-data/samples16s-asv-table.tsv", delim = "\t", skip = 1)
+# head(asv_16s_gr)
+```
+
+```{r}
+asv16s_wtax <- asv_16s_gr %>%
+  select(FeatureID = '#OTU ID', everything()) %>%
+  pivot_longer(cols = !FeatureID,
+               names_to = "SAMPLEID_16S", values_to = "SEQUENCE_COUNT") %>%
+  left_join((tax_16 |> select(FeatureID = `Feature ID`, Taxon)))
+```
+
+Import and combine metadata files
 ```{r}
 metadata_16s <- read.csv("input-data/manifest-16s.csv")
-# head(metadata_16s)
+metadata_vent <- read_delim("input-data/ventnames-gordaridge-16S.txt", delim = "\t")
+
+# head(metadata_vent)
+metadata_gr_16 <- metadata_16s |> 
+  select(SAMPLEID_16S = `sample.id`, MC, Substrate) |> 
+  add_column(Sampletype = "Microcolonizer",
+             SAMPLE_AMY = "Substrate 16S") |> 
+  bind_rows(metadata_vent)
 ```
 
-```{r}
-head(tax_16)
-```
 
 ```{r}
-asv_wtax_16 <- df_16 |> 
-  select(`Feature ID` = `#OTU ID`, everything()) |> 
-  left_join(tax_16) |> 
-  pivot_longer(cols = starts_with("MC"), names_to = "SAMPLES", values_to = "SEQUENCE_COUNT") |> 
-  select(FEATUREID = `Feature ID`, Taxon, SAMPLES, SEQUENCE_COUNT) |> 
+asv16s_df <- asv16s_wtax |> 
   mutate(TAXON = str_replace_all(Taxon, ".__", "")) |> 
   separate(TAXON, into = c("Domain", "Phylum", "Class", "Order", "Family", "Genus", "Species"), remove = FALSE, sep = "; ") |> 
-  left_join((metadata_16s |> select(SAMPLES = `sample.id`, MC, Substrate))) |> 
+  left_join(metadata_gr_16) |> 
   mutate(MC = paste("MC", MC, sep = "")) |> 
   add_column(dataset = "16S")
-
-# head(asv_wtax_16)
+# head(asv16s_df)
 ```
 
 ```{r}
-save(asv_wtax_16, asv_wtax_18, file = "input-data/GR_Microcolonizer_data.RData")
+save(asv16s_df, asv_wtax_18, file = "input-data/GR_Microcolonizer_data.RData")
 ```

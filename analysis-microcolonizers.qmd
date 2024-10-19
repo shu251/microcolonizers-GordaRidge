@@ -18,16 +18,60 @@ load("input-data/GR_Microcolonizer_data.RData", verbose = TRUE)
 load("input-data/temp-data.RData", verbose = TRUE)
 ```
 
-`asv_wtax_18` data includes hydrothermal vents from Gorda Ridge in addition to the microcolonizers.
+`asv_wtax_18` data includes 18S rRNA gene sequences from hydrothermal vents at Gorda Ridge and the microcolonizer substrates.
 
+`asv16s_df` same sample set as 18S, but with 16S rRNA gene sequences.
 
 # Subset only Microcolonizer data
 
+_GOALS_
+
+1. Visualize a summary of the protistan (18S rRNA gene) and bacteria/archaeal (16S rRNA gene) community within diffuse vents, at Mt Edwards especially, and then an overall look at the different microcolonizers.
+
+2. Look at different microcolonizer samples with respect to the temperature profile. Are the communities different by temperature.
+
 ```{r}
+head(asv_wtax_18)
 mc_18s <- asv_wtax_18 |> 
-  filter(SAMPLETYPE == "Microcolonizer")
+  filter(SAMPLETYPE == "Microcolonizer") |> 
+  group_by(MC, Substrate, FeatureID, Taxon, Domain, 
+           Supergroup, Phylum, Class, Order, Family, Genus, Species) |> 
+  summarize(SEQ_AVG = mean(SEQUENCE_COUNT)) |> 
+  unite(TAX_LEVEL, Supergroup, Phylum, sep = "-", remove = FALSE)
 # head(mc_18s)
 
-# 16S data is only from microcolonizers
+# head(asv16s_df)
+mc_16s <- asv16s_df |> 
+  filter(Sampletype == "Microcolonizer") |> 
+  group_by(MC, Substrate, FeatureID, Taxon, Domain, 
+          Phylum, Class, Order, Family, Genus, Species) |> 
+  summarize(SEQ_AVG = mean(SEQUENCE_COUNT)) |> 
+  unite(TAX_LEVEL, Domain, Phylum, sep = "-", remove = FALSE)
+# head(mc_16s)
 ```
 
+Get temperature
+```{r}
+head(log_files_all)
+```
+
+
+
+## Plot species richness (total ASVs) with temperature
+
+_Question_: Does overall species richness change within the microcolonizers? over "time" and with respect to temperature. Same for protists and prokaryotes?
+
+Show differences between microcolonizers with temperature. 
+
+```{r}
+
+```
+
+
+
+
+_continuing question_: if there are specific patterns in species richness for certain microcolonizers, are there certain species that are driving this pattern?
+
+# Get data imported for phyloseq
+
+The goal is to run a network analysis 

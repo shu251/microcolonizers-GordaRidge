@@ -152,7 +152,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </ul></li>
   <li><a href="#qc-18s-rrna-gene-dataset" id="toc-qc-18s-rrna-gene-dataset" class="nav-link" data-scroll-target="#qc-18s-rrna-gene-dataset"><span class="header-section-number">1.3</span> QC 18S rRNA gene dataset</a></li>
   </ul></li>
-  <li><a href="#obtain-16s-rrna-data-frames" id="toc-obtain-16s-rrna-data-frames" class="nav-link" data-scroll-target="#obtain-16s-rrna-data-frames"><span class="header-section-number">2</span> Obtain 16S rRNA data frames</a></li>
+  <li><a href="#obtain-16s-rrna-data-frames" id="toc-obtain-16s-rrna-data-frames" class="nav-link" data-scroll-target="#obtain-16s-rrna-data-frames"><span class="header-section-number">2</span> Obtain 16S rRNA data frames</a>
+  <ul class="collapse">
+  <li><a href="#import-all-16s-rrna-tag-data" id="toc-import-all-16s-rrna-tag-data" class="nav-link" data-scroll-target="#import-all-16s-rrna-tag-data"><span class="header-section-number">2.1</span> Import all 16S rRNA tag data</a></li>
+  </ul></li>
   </ul>
 </nav>
 </nav>
@@ -337,7 +340,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="qc-18s-rrna-gene-dataset" class="level2" data-number="1.3">
 <h2 data-number="1.3" class="anchored" data-anchor-id="qc-18s-rrna-gene-dataset"><span class="header-section-number">1.3</span> QC 18S rRNA gene dataset</h2>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(asv_wtax_wstats)</span>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># head(asv_wtax_wstats)</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>asv_wtax_18 <span class="ot">&lt;-</span> asv_wtax_wstats <span class="sc">|&gt;</span> </span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Sample_or_Control <span class="sc">==</span> <span class="st">"Sample"</span>) <span class="sc">|&gt;</span> </span>
@@ -353,38 +356,50 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="obtain-16s-rrna-data-frames" class="level1" data-number="2">
 <h1 data-number="2"><span class="header-section-number">2</span> Obtain 16S rRNA data frames</h1>
+<section id="import-all-16s-rrna-tag-data" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="import-all-16s-rrna-tag-data"><span class="header-section-number">2.1</span> Import all 16S rRNA tag data</h2>
+<p>This includes from Gorda Ridge and substrates.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>df_16 <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="st">"input-data/samples16s-asv-table.tsv"</span>, <span class="at">delim =</span> <span class="st">"</span><span class="sc">\t</span><span class="st">"</span>, <span class="at">skip =</span> <span class="dv">1</span>)</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(df_16)</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>tax_16 <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="st">"input-data/taxonomy.tsv"</span>, <span class="at">delim =</span> <span class="st">"</span><span class="sc">\t</span><span class="st">"</span>)</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(tax_16)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>tax_16 <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="st">"input-data/taxonomy.tsv"</span>, <span class="at">delim =</span> <span class="st">"</span><span class="sc">\t</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>metadata_16s <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"input-data/manifest-16s.csv"</span>)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co"># head(metadata_16s)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>asv_16s_gr <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="st">"input-data/samples16s-asv-table.tsv"</span>, <span class="at">delim =</span> <span class="st">"</span><span class="sc">\t</span><span class="st">"</span>, <span class="at">skip =</span> <span class="dv">1</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co"># head(asv_16s_gr)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(tax_16)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>asv16s_wtax <span class="ot">&lt;-</span> asv_16s_gr <span class="sc">%&gt;%</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="at">FeatureID =</span> <span class="st">'#OTU ID'</span>, <span class="fu">everything</span>()) <span class="sc">%&gt;%</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="sc">!</span>FeatureID,</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>               <span class="at">names_to =</span> <span class="st">"SAMPLEID_16S"</span>, <span class="at">values_to =</span> <span class="st">"SEQUENCE_COUNT"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>((tax_16 <span class="sc">|&gt;</span> <span class="fu">select</span>(<span class="at">FeatureID =</span> <span class="st">`</span><span class="at">Feature ID</span><span class="st">`</span>, Taxon)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Import and combine metadata files</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>metadata_16s <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"input-data/manifest-16s.csv"</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>metadata_vent <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="st">"input-data/ventnames-gordaridge-16S.txt"</span>, <span class="at">delim =</span> <span class="st">"</span><span class="sc">\t</span><span class="st">"</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co"># head(metadata_vent)</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>metadata_gr_16 <span class="ot">&lt;-</span> metadata_16s <span class="sc">|&gt;</span> </span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="at">SAMPLEID_16S =</span> <span class="st">`</span><span class="at">sample.id</span><span class="st">`</span>, MC, Substrate) <span class="sc">|&gt;</span> </span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">add_column</span>(<span class="at">Sampletype =</span> <span class="st">"Microcolonizer"</span>,</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>             <span class="at">SAMPLE_AMY =</span> <span class="st">"Substrate 16S"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_rows</span>(metadata_vent)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>asv_wtax_16 <span class="ot">&lt;-</span> df_16 <span class="sc">|&gt;</span> </span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="st">`</span><span class="at">Feature ID</span><span class="st">`</span> <span class="ot">=</span> <span class="st">`</span><span class="at">#OTU ID</span><span class="st">`</span>, <span class="fu">everything</span>()) <span class="sc">|&gt;</span> </span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(tax_16) <span class="sc">|&gt;</span> </span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">starts_with</span>(<span class="st">"MC"</span>), <span class="at">names_to =</span> <span class="st">"SAMPLES"</span>, <span class="at">values_to =</span> <span class="st">"SEQUENCE_COUNT"</span>) <span class="sc">|&gt;</span> </span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="at">FEATUREID =</span> <span class="st">`</span><span class="at">Feature ID</span><span class="st">`</span>, Taxon, SAMPLES, SEQUENCE_COUNT) <span class="sc">|&gt;</span> </span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">TAXON =</span> <span class="fu">str_replace_all</span>(Taxon, <span class="st">".__"</span>, <span class="st">""</span>)) <span class="sc">|&gt;</span> </span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate</span>(TAXON, <span class="at">into =</span> <span class="fu">c</span>(<span class="st">"Domain"</span>, <span class="st">"Phylum"</span>, <span class="st">"Class"</span>, <span class="st">"Order"</span>, <span class="st">"Family"</span>, <span class="st">"Genus"</span>, <span class="st">"Species"</span>), <span class="at">remove =</span> <span class="cn">FALSE</span>, <span class="at">sep =</span> <span class="st">"; "</span>) <span class="sc">|&gt;</span> </span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>((metadata_16s <span class="sc">|&gt;</span> <span class="fu">select</span>(<span class="at">SAMPLES =</span> <span class="st">`</span><span class="at">sample.id</span><span class="st">`</span>, MC, Substrate))) <span class="sc">|&gt;</span> </span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">MC =</span> <span class="fu">paste</span>(<span class="st">"MC"</span>, MC, <span class="at">sep =</span> <span class="st">""</span>)) <span class="sc">|&gt;</span> </span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">add_column</span>(<span class="at">dataset =</span> <span class="st">"16S"</span>)</span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="co"># head(asv_wtax_16)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>asv16s_df <span class="ot">&lt;-</span> asv16s_wtax <span class="sc">|&gt;</span> </span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">TAXON =</span> <span class="fu">str_replace_all</span>(Taxon, <span class="st">".__"</span>, <span class="st">""</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate</span>(TAXON, <span class="at">into =</span> <span class="fu">c</span>(<span class="st">"Domain"</span>, <span class="st">"Phylum"</span>, <span class="st">"Class"</span>, <span class="st">"Order"</span>, <span class="st">"Family"</span>, <span class="st">"Genus"</span>, <span class="st">"Species"</span>), <span class="at">remove =</span> <span class="cn">FALSE</span>, <span class="at">sep =</span> <span class="st">"; "</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(metadata_gr_16) <span class="sc">|&gt;</span> </span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">MC =</span> <span class="fu">paste</span>(<span class="st">"MC"</span>, MC, <span class="at">sep =</span> <span class="st">""</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">add_column</span>(<span class="at">dataset =</span> <span class="st">"16S"</span>)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># head(asv16s_df)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(asv_wtax_16, asv_wtax_18, <span class="at">file =</span> <span class="st">"input-data/GR_Microcolonizer_data.RData"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(asv16s_df, asv_wtax_18, <span class="at">file =</span> <span class="st">"input-data/GR_Microcolonizer_data.RData"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->
