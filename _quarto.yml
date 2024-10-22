@@ -5,6 +5,7 @@ project:
     - import-qc-metabarcoding.qmd
     - background.qmd
     - index.qmd
+    - analysis-microcolonizers.qmd
 
 website:
   title: "Microcolonizers"
@@ -13,8 +14,11 @@ website:
       - href: background.qmd
         text: Home
       - href: index.qmd
-        text: Summary of results
+        text: QIIME2 & Temperature logger analysis
       - href: import-qc-metabarcoding.qmd
+        text: Preprocess & compile data
+      - href: analysis-microcolonizers.qmd
+        text: Data analysis & statistics
 
 format:
   html:

@@ -12,8 +12,6 @@ execute:
 
 List of all commands used in QIIME2 (2023.2). Run on the TAMU HPRC using the SLURM job scheduler.
 
-
-
 ```{r}
 module load QIIME2/2023.2
 
