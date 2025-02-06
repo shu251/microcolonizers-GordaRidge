@@ -138,14 +138,16 @@ Show differences between microcolonizers with temperature.
 
 ```{r}
 head(asv_wtax_18)
+length(unique(asv_wtax_18$FeatureID))
 unique(asv_wtax_18$Domain)
 ```
 
 ```{r}
-mc_tmp_18 <- asv_wtax_18 |> 
+mc_18S_df <- asv_wtax_18 |> 
   select(-SAMPLE) |> 
+  # Subset to data for THIS specific project
   filter(SAMPLETYPE == "Microcolonizer" | VENT == "Mt Edwards" | VENT == "Deep seawater") |> 
-  filter(Domain == "Eukaryota") |> 
+  filter(Domain == "Eukaryota") |>
   mutate(SUBSTRATE = str_replace_all(Substrate, "z2", "z")) |> 
   mutate(SAMPLE = case_when(
     SAMPLETYPE == "Microcolonizer" ~ paste(MC, SUBSTRATE, sep = "-"),
@@ -158,51 +160,41 @@ mc_tmp_18 <- asv_wtax_18 |>
   filter(SEQ_AVG > 0)
 ```
 
-Filter by ASV size (sequence total for ASVs)
+```{r}
+# head(mc_tmp_18)
+# unique(mc_tmp_18$Domain)
+# unique(mc_tmp_18$SAMPLE)
+```
+
+
+### Filter by ASV distribution (18S)
 
 ```{r}
 # ASV filtering by how many sequences are present for each ASV
-## Total number of ASVs
-length(unique(mc_tmp_18$FeatureID))
+## Total number of ASVs with Unassigned
+length(unique(mc_18S_df$FeatureID))
 
-# Total number of ASVs that have at least 500 sequences in one of the samples.
-tmp2 <- mc_tmp_18 |> 
-  filter(SEQ_AVG > 100)
+# ID substrates only
+mc_tmp_18_onsubstrates <- mc_18S_df %>% 
+  filter(grepl("MC", SAMPLE))
+unique(mc_tmp_18_onsubstrates$SAMPLE) # check
+length(unique(mc_tmp_18_onsubstrates$FeatureID))
 
-length(unique(tmp2$FeatureID))
+# Repeat for opposite:
+bkgd_vent <- mc_18S_df %>% 
+  filter(!(grepl("MC", SAMPLE)))
+unique(bkgd_vent$SAMPLE)
 
-keep_18 <- as.character(unique(tmp2$FeatureID))
-length(keep_18)
-```
 
-Create filtered 18S dataset and convert to phyloseq object.
+# Isolate a list of feature IDs in background and vent fluid
+bkgd_vent_ASV_list <- as.character(unique(bkgd_vent$FeatureID))
 
-```{r}
-head(mc_tmp_18)
-mat_18s_filtered <- mc_tmp_18 |> ungroup() |> 
-  filter(FeatureID %in% keep_18) |> 
-  filter(SEQ_AVG > 0) |> 
-  select(FeatureID, SAMPLE, SEQ_AVG) |> 
-  pivot_wider(names_from = SAMPLE, values_from = SEQ_AVG, values_fill = 0) |> 
-  select(-`MC4-Shell`) |> 
-  column_to_rownames(var = "FeatureID") |> 
-  as.matrix()
-# colnames(mat_18s_filtered)
+# To get substrate ONLY, remove this character list
+mc_tmp_18_onsubstrates_ONLY <- mc_tmp_18_onsubstrates %>% 
+  filter(!(FeatureID %in% bkgd_vent_ASV_list))
 
-mat_tax18_filtered <- mc_tmp_18 |> ungroup() |> 
-  filter(FeatureID %in% keep_18) |> 
-  select(FeatureID, Taxon, Domain, Phylum, Class, Order, Family, Genus, Species) |> 
-  distinct() |> 
-  column_to_rownames(var = "FeatureID") |> 
-  as.matrix()
-```
-
-SPEIC-EASI network analysis requires samples to be in the same order. Additionally, the bacteria set of samples has more substrate options than the eukaryote dataset.
-
-```{r}
-colnames(mat_18s_filtered)
-set_of_samples <- colnames(mat_18s_filtered) # Make character list
-# class(set_of_samples)
+head(mc_tmp_18_onsubstrates_ONLY)
+length(unique(mc_tmp_18_onsubstrates_ONLY$FeatureID))
 ```
 
 ## Bacteria
@@ -211,7 +203,7 @@ As long as an ASV appears at least once to have more than 100 sequences, keep th
 
 ```{r}
 # head(asv16s_df)
-mc_tmp <- asv16s_df |> 
+mc_16S_df <- asv16s_df |> 
   filter(Sampletype == "Microcolonizer" | LocationName == "Mt Edwards Vent" | LocationName == "Deep seawater" & STATUS == "keep") |> 
   mutate(SAMPLE = case_when(
     Sampletype == "Microcolonizer" ~ paste(MC, Substrate, sep = "-"),
@@ -223,265 +215,169 @@ mc_tmp <- asv16s_df |>
   summarize(SEQ_AVG = mean(SEQUENCE_COUNT)) |> 
   filter(!(Domain == "Unassigned") & !(Domain == "Eukaryota")) |> 
   filter(SEQ_AVG > 0)
-
-# ASV filtering by how many sequences are present for each ASV
-## Total number of ASVs
-length(unique(mc_tmp$FeatureID))
-
-# Total number of ASVs that have at least 100 sequences in one of the samples.
-tmptmp <- mc_tmp |> 
-  filter(SEQ_AVG > 100)
-length(unique(tmptmp$FeatureID))
-
-keep <- as.character(unique(tmptmp$FeatureID))
-length(keep)
 ```
 
 ```{r}
-set_of_samples
-unique(tmptmp$SAMPLE)
+save(mc_18S_df, mc_16S_df, file = "input-data/microcolonizer_inputdata_02082025.RData")
+```
+
+
+> ML work on ensuring data files and tables regarding ASV distribution are determined.
+
+```{r}
+
+```
+
+
+
+## Filter for Network Analysis
+
+> SH
+
+Create filtered 18S dataset and convert to phyloseq object.
+
+```{r}
+# head(mc_tmp_18)
+# mat_18s_filtered <- mc_tmp_18 |> ungroup() |> 
+#   filter(FeatureID %in% keep_18) |> 
+#   filter(SEQ_AVG > 0) |> 
+#   select(FeatureID, SAMPLE, SEQ_AVG) |> 
+#   pivot_wider(names_from = SAMPLE, values_from = SEQ_AVG, values_fill = 0) |> 
+#   select(-`MC4-Shell`) |> 
+#   column_to_rownames(var = "FeatureID") |> 
+#   as.matrix()
+# # colnames(mat_18s_filtered)
+# 
+# mat_tax18_filtered <- mc_tmp_18 |> ungroup() |> 
+#   filter(FeatureID %in% keep_18) |> 
+#   select(FeatureID, Taxon, Domain, Phylum, Class, Order, Family, Genus, Species) |> 
+#   distinct() |> 
+#   column_to_rownames(var = "FeatureID") |> 
+#   as.matrix()
+```
+
+SPEIC-EASI network analysis requires samples to be in the same order. Additionally, the bacteria set of samples has more substrate options than the eukaryote dataset.
+
+```{r}
+# colnames(mat_18s_filtered)
+# set_of_samples <- colnames(mat_18s_filtered) # Make character list
+# class(set_of_samples)
+```
+
+
+
+
+```{r}
+# set_of_samples
+# unique(tmptmp$SAMPLE)
 ```
 
 Create filtered 16S dataset and convert to phyloseq object.
 
 ```{r}
 # head(mc_tmp)
-mat_16s_filtered <- mc_tmp |> ungroup() |> 
-  filter(FeatureID %in% keep) |> 
-  filter(SEQ_AVG > 0) |> 
-  select(FeatureID, SAMPLE, SEQ_AVG) |> 
-  pivot_wider(names_from = SAMPLE, values_from = SEQ_AVG, values_fill = 0) |> 
-  ungroup() |> 
-  select(FeatureID, all_of(set_of_samples)) |> 
-  column_to_rownames(var = "FeatureID") |> 
-  as.matrix()
-colnames(mat_16s_filtered)
-
-mat_tax_filtered <- mc_tmp |> ungroup() |> 
-  filter(FeatureID %in% keep) |> 
-  select(FeatureID, Taxon, Domain, Phylum, Class, Order, Family, Genus, Species) |> 
-  distinct() |> 
-  column_to_rownames(var = "FeatureID") |> 
-  as.matrix()
-```
-
-```{r}
-identical(colnames(mat_16s_filtered), colnames(mat_18s_filtered))
-```
-
-
-# Get data imported for phyloseq
-
-The goal is to run a network analysis Use `mat_tax_filtered` and `mat_16s_filtered` for bacteria and archaea members of the community.
-
-```{r}
-asv_16s <- otu_table(mat_16s_filtered, taxa_are_rows = TRUE)
-tax_16s <- tax_table(mat_tax_filtered)
-phylo_16s <- phyloseq(asv_16s, tax_16s)
-phylo_16s
-```
-
-Use `mat_tax18_filtered` and `mat_18s_filtered` for eukaryote members of the community.
-
-```{r}
-asv_18s <- otu_table(mat_18s_filtered, taxa_are_rows = TRUE)
-tax_18s <- tax_table(mat_tax18_filtered)
-phylo_18s <- phyloseq(asv_18s, tax_18s)
-phylo_18s
-```
-
-Both should have 16 samples.
-
-```{r}
-save(phylo_16s, phylo_18s, file = "output-data/phyloseq-objs.RData")
-```
-
-# Run SPEIC-EASI
-
-Installation of SpiecEasi and phyloseq on the HPRC
-
-```{r}
-# | eval: false
-# | echo: false
-# library(devtools)
-# install_github("zdk123/SpiecEasi")
-
-# if (!require("BiocManager", quietly = TRUE))
-    # install.packages("BiocManager")
-# BiocManager::install("phyloseq")
-```
-
-For network analysis, we will take filtered 18S and 16S rRNA gene dataset and perform the network analysis across the two.
-
-For the substrate at Gorda Ridge, I've also included the background seawater and the diffuse vent fluid from Mt. Edwards.
-
-```{r}
-# | eval: false
-# | echo: false
-# load("/16s-microcolonizer/network/phyloseq-objs.RData", verbose = TRUE)
-# phylo_16s
-# phylo_18s
-
-# library(phyloseq); library(SpiecEasi); library(tidyverse)
-
-# ?spiec.easi Cross Domain approach 
-# substrate_GR <- spiec.easi(list(phylo_16s, phylo_18s), 
-#                     method = 'mb', verbose = TRUE,
-#                     nlambda = 40, lambda.min.ratio = 1e-2, 
-#                     pulsar.params = list(thresh = 0.05),
-#                     ncores = 8)
-
-# save(substrate_GR, file = "/scratch/group/hu-lab/microcolonizer-gr-2019/substrate-gr-network.RData")
-```
-
--   `mb`: meinshausen-buhlmann's neighborhood selection
-
-Reference from https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-017-0393-0
-
-```{r}
-# | eval: false
-# Check output
-# getStability(se_GR)
-# sum(getRefit(se_GR))/2
+# mat_16s_filtered <- mc_tmp |> ungroup() |> 
+#   filter(FeatureID %in% keep) |> 
+#   filter(SEQ_AVG > 0) |> 
+#   select(FeatureID, SAMPLE, SEQ_AVG) |> 
+#   pivot_wider(names_from = SAMPLE, values_from = SEQ_AVG, values_fill = 0) |> 
+#   ungroup() |> 
+#   select(FeatureID, all_of(set_of_samples)) |> 
+#   column_to_rownames(var = "FeatureID") |> 
+#   as.matrix()
+# colnames(mat_16s_filtered)
 # 
-# # Extract weighted matrix 
-# se.beta <- as.matrix(symBeta(getOptBeta(se_GR)))
-# df_beta <- as.data.frame(se.beta)
-# 
-# ## Extract adajency matrix 
-# adj.mat <- getRefit(se_GR)
-# df_adj <- as.data.frame(as.matrix(adj.mat))
-# 
-# ## Assign names from original dataframes 
-# colnames(df_beta) <- colnames(se_GR$est$data) 
-# colnames(df_adj) <- colnames(se_GR$est$data)
-# 
-# row.names(df_adj) <- colnames(se_GR$est$data)
-# row.names(df_beta) <- colnames(se_GR$est$data)
-# 
-# # Save output 
-# save(df_adj, df_beta, se_GR, file = 'gr-spieceasi-output-20-08-2020.RData')
-```
-
-# Network analysis
-
-## Spearman Rank correlation
-Use the same pared down data to perform a spearman correlation coefficient test.
-```{r}
-library(compositions)
-
-# CLR transform datasets individually and then anneal together.
-combined_ASVs_clr <- as.data.frame(t(compositions::clr(t(as.data.frame(mat_16s_filtered))))) %>% 
-  rownames_to_column(var = "TMP") %>% 
-  mutate(TMP_2 = paste(TMP, "16S", sep = "_")) %>% 
-  rbind(
-    (as.data.frame(t(compositions::clr(t(as.data.frame(mat_18s_filtered))))) %>% 
-  rownames_to_column(var = "TMP") %>% 
-  mutate(TMP_2 = paste(TMP, "18S", sep = "_")))
-  ) %>% 
-  column_to_rownames(var = "TMP_2") %>% 
-  select(-TMP)
-
-glimpse(combined_ASVs_clr)
-```
-Calculate spearman correlation.
-```{r}
-# ?cor()
-spear_cor <- cor(t(combined_ASVs_clr), method = "spearman")
-```
-`spear_cor` is a matrix that has all pairwise comparisons of ASVs to one another.
-
-Spearman's rank correlation coefficient shows the ranking between two variables (all pairwise comparisons). Range of values is from -1 to 1. Values that are closer to -1 or 1 are the most opposed (-1) or most identical (+1).
-
-For our analysis, we will look at comparisons that are <-0.5 for negative relationships and and >0.5 for positive relationships.
-
-Re-format data so it is meaningful
-```{r}
-spear_cor_output <- as.data.frame(spear_cor) %>% 
-  rownames_to_column(var = "PAIR_A") %>% 
-  pivot_longer(cols = c(-PAIR_A), names_to = "PAIR_B", values_to = "VALUE")
-
-# head(spear_cor_output)
-hist(spear_cor_output$VALUE)
-```
-Stats on Spearman output
-```{r}
-glimpse(spear_cor_output)
-filtered_spear_cor <- spear_cor_output %>% 
-  filter((VALUE > 0.75 | VALUE < -0.75)) %>% 
-  filter(!(PAIR_A == PAIR_B))
-glimpse(filtered_spear_cor)
-```
-* We began with over 3 million comparisons.
-
-* We filtered by abs(0.75) and we are ending up with over 20,000 pairwise interactions to look at. 
-
-* Also removed pairwise comparisons that are identical to one another.
-
-* Ending with over 18k comparisons.
-
-Include taxonomic information
-```{r}
-taxa_key_combined <- as.data.frame(mat_tax_filtered) %>% 
-  rownames_to_column(var = "bac") %>% 
-  mutate(FEATUREID = paste(bac, "16S", sep = "_")) %>% 
-  rbind((as.data.frame(mat_tax18_filtered) %>% 
-    rownames_to_column(var = "bac") %>% 
-    mutate(FEATUREID = paste(bac, "18S", sep = "_")))) %>% 
-  select(-bac)
-# head(taxa_key_combined)
-```
-Join with taxa information in step-wise fashion.
-```{r}
-# head(filtered_spear_cor)
-filtered_spear_cor_wtax <- filtered_spear_cor %>% 
-  left_join(taxa_key_combined, by = join_by(PAIR_A == FEATUREID)) %>% 
-  left_join(taxa_key_combined, by = join_by(PAIR_B == FEATUREID), suffix = c("_A", "_B")) %>% 
-  # Adding interaction type at the domain level
-  mutate(INTERACTION_TYPE = paste(Domain_A, Domain_B, sep = "-")) %>% 
-  # Filtering again if phylum level is NA
-  filter(!(is.na(Phylum_A)) | !(is.na(Phylum_B)))
-
-head(filtered_spear_cor_wtax)
-unique(filtered_spear_cor_wtax$INTERACTION_TYPE)
-glimpse(filtered_spear_cor_wtax)
-```
-```{r}
-save(filtered_spear_cor_wtax, file = "output-data/spearman_output.RData")
+# mat_tax_filtered <- mc_tmp |> ungroup() |> 
+#   filter(FeatureID %in% keep) |> 
+#   select(FeatureID, Taxon, Domain, Phylum, Class, Order, Family, Genus, Species) |> 
+#   distinct() |> 
+#   column_to_rownames(var = "FeatureID") |> 
+#   as.matrix()
 ```
 
 
 
-## Other networks?
-Graphical lasso network: Non-paranormal transformation applied to data using `huge.npn`.
 ```{r}
-# library(huge)
+# identical(colnames(mat_16s_filtered), colnames(mat_18s_filtered))
+```
+
+
+# Explore research questions (preliminary)
+
+```{r}
+load("input-data/microcolonizer_inputdata_02082025.RData", verbose = TRUE)
+```
+
+## Presence absense with barplots to ID taxa distribution
+
+- incorporate ML's code to here!
+- maybe remove low relative abundance ASVs?
+
+
+
+
+## Diversity indices
+
+### 18S diversity indices
+
+Prep 2 different data types:
+
+```{r}
+head(mc_18S_df)
+unique(mc_18S_df$SAMPLE)
+
+sum_across_substrates <- mc_18S_df %>% 
+  separate(SAMPLE, into = c("SAMPLE_ID", "SUBSTRATE"), sep = "-", remove = FALSE) %>% 
+  group_by(SAMPLE_ID, FeatureID) %>% 
+    summarise(SUM = sum(SEQ_AVG))
+
+
+microcol_only <- mc_18S_df %>% 
+  separate(SAMPLE, into = c("SAMPLE_ID", "SUBSTRATE"), sep = "-", remove = FALSE) %>% 
+  filter(!is.na(SUBSTRATE)) %>% 
+  group_by(SAMPLE, SUBSTRATE, FeatureID) %>% 
+  summarise(SUM = sum(SEQ_AVG))
+
+# unique(sum_across_substrates$SUBSTRATE)
+# head(microcol_only)
+```
+
+Plot total ASVs on y-axis for each sample (x-axis).
+```{r}
+```
+
+Plot Shannon diversity on y-axis for each sample (x-axis).
+```{r}
+# First make dataset wide with columns as samples and featureIDs as rownames
+wide_18S <- mc_18S_df %>% ungroup() %>% 
+  # Select only columns we need
+  select(SAMPLE, FeatureID, SEQ_AVG) %>% 
+  pivot_wider(names_from = SAMPLE, values_from = SEQ_AVG, values_fill = 0) %>% 
+  column_to_rownames(var = "FeatureID")
+
+library(vegan)
 ```
 
 ```{r}
-# Run graphical lasso network
-# set.seed(100)
-# npn <- huge.npn(netGAM5)
-# lams  <- pulsar::getLamPath(pulsar::getMaxCov(npn), .01, len=30)
-# hugeargs <- list(lambda=lams, verbose=FALSE, method='glasso')
-# outd <- pulsar::pulsar(npn, fun=huge::huge, fargs=hugeargs,rep.num=50, criterion = "stars")
-# opt <- outd$stars
-# n <- opt$opt.index
-# # Get output adjacency matrix from graphical lasso model
-# fit <- pulsar::refit(outd)
-# fit <- fit$refit
-# fit.fin <- fit$stars
-# fit.fin <- as.matrix(fit.fin)
-# fit.fin <- as.data.frame(fit.fin)
-# colnames(fit.fin) <- colnames(netGAM5)
-# rownames(fit.fin)<- colnames(netGAM5)
-# fit.fin <- as.matrix(fit.fin)
-# 
-# dim(fit.fin)
+?vegdist()
+?diversity()
+class(wide_18S)
+wide_18S_mat <- as.matrix(wide_18S)
+
+# Standardize data ahead of time
+# CLR, hellinger, standardize
+stand_wide_18S_mat <- decostand(wide_18S_mat, method = "hellinger", MARGIN = 2, )
+head(stand_wide_18S_mat)
+
+# Shannon diversity:
+shannon_18S <- diversity(stand_wide_18S_mat, index = "shannon", MARGIN = 2, equalize.groups = TRUE)
+shannon_18S
+
+# Inv Simp
+inv_simp_18S <- diversity(stand_wide_18S_mat, index = "invsimpson", MARGIN = 2 , equalize.groups = TRUE)
+inv_simp_18S
 ```
 
-# Session Info
 
-```{r}
-sessionInfo()
-```
+
+
